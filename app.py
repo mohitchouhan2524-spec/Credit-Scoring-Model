@@ -204,7 +204,7 @@ def get_metrics_summary():
 
 def risk_band(prob_default: float) -> tuple[str, str]:
     """Map a predicted default probability to a decision recommendation + hex color."""
-    if prob_default < 0.20:
+    if prob_default < 0.30:
         return "Approve", "var(--approve)"
     elif prob_default < 0.50:
         return "Manual Review", "var(--review)"
