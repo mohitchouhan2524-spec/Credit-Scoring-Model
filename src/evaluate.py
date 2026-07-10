@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from itertools import combinations
+from scipy.stats import chi2_contingency
 
 from sklearn.metrics import (
     accuracy_score,
@@ -168,6 +170,63 @@ def plot_feature_importance(pipeline, model_name: str, top_n: int = 15):
     fig.savefig(path, dpi=150)
     plt.close(fig)
     logger.info(f"Saved feature importance plot -> {path}")
+
+
+def cramers_v(x: pd.Series, y: pd.Series) -> float:
+    """
+    Cramer's V: association strength between two categorical variables, 0-1
+    (0 = no association, 1 = perfect association). Derived from the chi-square
+    statistic, with a bias correction (Bergsma 2013) so small samples / high
+    cardinality don't inflate the score.
+    """
+    confusion_matrix = pd.crosstab(x, y)
+    chi2 = chi2_contingency(confusion_matrix)[0]
+    n = confusion_matrix.sum().sum()
+    r, k = confusion_matrix.shape
+
+    phi2 = chi2 / n
+    phi2_corr = max(0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
+    r_corr = r - ((r - 1) ** 2) / (n - 1)
+    k_corr = k - ((k - 1) ** 2) / (n - 1)
+    denom = min((k_corr - 1), (r_corr - 1))
+
+    if denom <= 0:
+        return 0.0
+    return float(np.sqrt(phi2_corr / denom))
+
+
+def categorical_association_matrix(df: pd.DataFrame, columns=None) -> pd.DataFrame:
+    """
+    Build a symmetric matrix of Cramer's V scores for every pair of categorical
+    columns. Treat this like a correlation matrix, but for categorical data
+    (Pearson correlation is not valid for non-numeric/non-ordinal features).
+    """
+    if columns is None:
+        columns = df.select_dtypes(exclude=[np.number]).columns.tolist()
+
+    matrix = pd.DataFrame(np.ones((len(columns), len(columns))), index=columns, columns=columns)
+    for col1, col2 in combinations(columns, 2):
+        v = cramers_v(df[col1], df[col2])
+        matrix.loc[col1, col2] = v
+        matrix.loc[col2, col1] = v
+
+    return matrix
+
+
+def plot_categorical_association(df: pd.DataFrame, columns=None, filename="categorical_association.png"):
+    """Heatmap of Cramer's V association strength between categorical columns."""
+    ensure_dirs()
+    matrix = categorical_association_matrix(df, columns=columns)
+
+    fig, ax = plt.subplots(figsize=(max(5, len(matrix) * 0.9), max(4, len(matrix) * 0.8)))
+    sns.heatmap(matrix, annot=True, fmt=".2f", cmap="coolwarm", vmin=0, vmax=1, ax=ax)
+    ax.set_title("Categorical Feature Association (Cramer's V)")
+    fig.tight_layout()
+    path = FIGURES_DIR / filename
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    logger.info(f"Saved categorical association heatmap -> {path}")
+    return matrix
 
 
 def save_metrics(results: dict, comparison_df: pd.DataFrame, best_model_name: str):

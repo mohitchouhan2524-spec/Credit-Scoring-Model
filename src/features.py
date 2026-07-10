@@ -1,27 +1,3 @@
-"""
-features.py
-------------
-Feature engineering from raw financial history fields.
-Assumed raw columns (adjust FEATURE COLUMN NAMES below to match your real
-dataset if the names differ -- e.g. from a Kaggle credit dataset):
-    age, income, employment_length, existing_loans, debt, loan_amount,
-    credit_history_length, num_credit_lines, num_late_payments,
-    credit_utilization, savings
-
-Engineered features:
-    debt_to_income_ratio     = debt / income
-    loan_to_income_ratio     = loan_amount / income
-    savings_to_income_ratio  = savings / income
-    payment_history_score    = inverse of late payments relative to credit history
-    credit_mix_score         = num_credit_lines normalized by age
-    is_high_utilization      = flag for utilization > 0.7
-    age_bucket                = binned age group (categorical -> one-hot later)
-    income_bucket             = binned income group
-
-This module also builds the full sklearn ColumnTransformer used by train.py,
-so the exact same transformation is applied at training and inference time.
-"""
-
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer

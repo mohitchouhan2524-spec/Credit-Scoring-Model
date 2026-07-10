@@ -91,6 +91,32 @@ def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def encode_target(df: pd.DataFrame, target_col: str = TARGET_COLUMN, positive_label=None) -> pd.DataFrame:
+    """
+    Explicitly map a string/categorical target to 0/1, so the positive class
+    (1 = default / bad credit risk) is never left to sklearn's alphabetical
+    class ordering, which can silently flip precision/recall/ROC-AUC.
+
+    positive_label: the raw value in your data that means "defaulted / bad
+    credit risk" (e.g. "bad", "2", 1 -- check with df[target_col].unique()
+    first). If None, assumes the target is already 0/1 and does nothing.
+    """
+    df = df.copy()
+    if positive_label is None:
+        return df
+
+    unique_vals = df[target_col].unique().tolist()
+    if positive_label not in unique_vals:
+        raise ValueError(
+            f"positive_label={positive_label!r} not found in {target_col} values: {unique_vals}"
+        )
+
+    mapping = {v: (1 if v == positive_label else 0) for v in unique_vals}
+    logger.info(f"Encoding target '{target_col}' -> {mapping}")
+    df[target_col] = df[target_col].map(mapping).astype(int)
+    return df
+
+
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     """Full cleaning pipeline: dedup -> drop IDs -> impute missing values."""
     df = drop_duplicates_and_ids(df)
@@ -116,6 +142,7 @@ def split_data(
         f"(train default rate={y_train.mean():.2%}, test default rate={y_test.mean():.2%})"
     )
     return X_train, X_test, y_train, y_test
+
 
 def run_preprocessing(path=RAW_DATA_PATH) -> pd.DataFrame:
     """Convenience entry point: load + clean in one call."""

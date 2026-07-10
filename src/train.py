@@ -34,7 +34,7 @@ from src.utils import (
     save_model,
     save_csv,
 )
-from src.preprocessing import run_preprocessing, split_data
+from src.preprocessing import run_preprocessing, split_data, encode_target
 from src.features import engineer_features, get_feature_lists, build_preprocessor
 from src.evaluate import evaluate_model, compare_models, save_metrics
 
@@ -67,10 +67,12 @@ MODEL_REGISTRY = {
     },
 }
 
+
 def build_pipeline(estimator, numeric_features, categorical_features) -> Pipeline:
     preprocessor = build_preprocessor(numeric_features, categorical_features)
     pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("model", estimator)])
     return pipeline
+
 
 def train_all_models(X_train, y_train, X_test, y_test, numeric_features, categorical_features, cv_folds=5):
     """Grid-search each model in MODEL_REGISTRY, evaluate on the test set, return results."""
@@ -87,7 +89,7 @@ def train_all_models(X_train, y_train, X_test, y_test, numeric_features, categor
             param_grid=spec["param_grid"],
             scoring="roc_auc",
             cv=cv,
-            n_jobs=-1,
+            n_jobs=1,
             refit=True,
         )
         search.fit(X_train, y_train)
@@ -102,12 +104,29 @@ def train_all_models(X_train, y_train, X_test, y_test, numeric_features, categor
     return results, fitted_pipelines
 
 
-def main(data_path=RAW_DATA_PATH, cv_folds=5):
+def main(data_path=RAW_DATA_PATH, cv_folds=5, positive_label=None):
+    """
+    positive_label: the raw value in your target column that means
+    "defaulted / bad credit risk" (e.g. "bad", "2"). Required if your target
+    column is string/categorical -- sklearn's alphabetical class ordering
+    cannot be trusted to pick the right "positive" class for you. Leave as
+    None only if your target is already encoded as 0/1.
+    """
     set_seed()
     ensure_dirs()
 
     # 1. Load + clean
     df = run_preprocessing(data_path)
+
+    # 1b. Encode target to 0/1 if it isn't numeric already
+    if not pd.api.types.is_numeric_dtype(df[TARGET_COLUMN]):
+        if positive_label is None:
+            raise ValueError(
+                f"'{TARGET_COLUMN}' is non-numeric (values: {df[TARGET_COLUMN].unique().tolist()}). "
+                f"Pass positive_label=<value that means default/bad credit risk> to main(), "
+                f"e.g. main(positive_label='bad')."
+            )
+        df = encode_target(df, target_col=TARGET_COLUMN, positive_label=positive_label)
 
     # 2. Feature engineering
     df = engineer_features(df)

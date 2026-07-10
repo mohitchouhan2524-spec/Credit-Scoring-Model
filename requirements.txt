@@ -12,3 +12,6 @@ catboost
 streamlit
 jupyter
 notebook
+python-dotenv
+# Authentification
+supabase

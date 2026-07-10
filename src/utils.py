@@ -23,20 +23,27 @@ import pandas as pd
 # --------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-DATA_DIR = Path("C:/Users/mohit/Credit-scoring-model/data")
+DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 
-MODELS_DIR = Path("C:/Users/mohit/Credit-scoring-model/models")
-OUTPUTS_DIR = Path("C:/Users/mohit/Credit-scoring-model/outputs")
+MODELS_DIR = PROJECT_ROOT / "models"
+OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 FIGURES_DIR = OUTPUTS_DIR / "figures"
 REPORTS_DIR = OUTPUTS_DIR / "reports"
 
 RAW_DATA_PATH = RAW_DATA_DIR / "credit_data.csv"
 PROCESSED_DATA_PATH = PROCESSED_DATA_DIR / "processed_credit_data.csv"
 
-TARGET_COLUMN = "default"
-RANDOM_STATE = 42
+TARGET_COLUMN = "target"
+RANDOM_STATE = 9
+
+
+def ensure_dirs():
+    """Create all project directories if they don't already exist."""
+    for d in [RAW_DATA_DIR, PROCESSED_DATA_DIR, MODELS_DIR, FIGURES_DIR, REPORTS_DIR]:
+        d.mkdir(parents=True, exist_ok=True)
+
 
 def set_seed(seed: int = RANDOM_STATE):
     """Fix random seeds for reproducibility."""
@@ -61,6 +68,7 @@ def get_logger(name: str) -> logging.Logger:
 
 def save_model(model, filename: str):
     """Save a fitted model/pipeline to models/ using joblib."""
+    ensure_dirs()
     path = MODELS_DIR / filename
     joblib.dump(model, path)
     return path
