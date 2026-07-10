@@ -174,8 +174,8 @@ def inject_css():
 # ---------------------------------------------------------------------------
 @st.cache_resource
 def get_supabase_client() -> Client:
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
+    url = st.secrets.get("SUPABASE_URL", os.getenv("SUPABASE_URL"))
+    key = st.secrets.get("SUPABASE_KEY", os.getenv("SUPABASE_KEY"))
     if not url or not key:
         st.error(
             "Supabase is not configured. Add SUPABASE_URL and SUPABASE_KEY to "
