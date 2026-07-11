@@ -411,7 +411,7 @@ def render_app(supabase: Client):
             comp_df = pd.DataFrame(metrics_summary["comparison"])
             st.dataframe(comp_df.style.format(precision=3), use_container_width=True)
 
-    st.subheader("Applicant Details(prefer german credit dataset for features understanding)")
+    st.subheader("Applicant Details(Unfamiliar with a feature? See the German Credit dataset for reference)")
     col1, col2 = st.columns(2)
     with col1:
         age = st.number_input("Age", 18, 100, 35)
